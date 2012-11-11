@@ -23,6 +23,7 @@ function process($argv)
     $force      = in_array('--force', $argv);
     $quiet      = in_array('--quiet', $argv);
     $installDir = false;
+    $composerVersion = null;
 
     foreach ($argv as $key => $val) {
         if (0 === strpos($val, '--install-dir')) {
@@ -30,6 +31,26 @@ function process($argv)
                 $installDir = trim($argv[$key+1]);
             } else {
                 $installDir = trim(substr($val, 14));
+            }
+        } else if (0 === strpos($val, '--composer-version')) {
+            if (18 === strlen($val) && isset($argv[$key+1])) {
+                $composerVersion = trim($argv[$key+1]);
+            } else {
+                $composerVersion = trim(substr($val, 19));
+            }
+        }
+    }
+
+    // Allow overrides from composer.json
+    $jsonFile = dirname(__FILE__) . '/composer.json';
+    if (file_exists($jsonFile)) {
+        $json = json_decode(file_get_contents($jsonFile), true);
+        if (is_array($json)) {
+            if (!empty($json['config']['composer-version'])) {
+                $composerVersion = $json['config']['composer-version'];
+            }
+            if (!empty($json['config']['install-dir'])) {
+                $installDir = $json['config']['install-dir'];
             }
         }
     }
@@ -51,7 +72,7 @@ function process($argv)
     }
 
     if ($ok || $force) {
-        installComposer($installDir, $quiet);
+        installComposer($installDir, $quiet, $composerVersion);
         exit(0);
     }
 
@@ -71,6 +92,8 @@ Options
 --check              for checking environment only
 --force              forces the installation
 --install-dir="..."  accepts a target installation directory
+--composer-version="..."  optional specific version of Composer to install,
+                          otherwise latest version is installed
 
 EOF;
 }
@@ -255,7 +278,7 @@ function checkPlatform($quiet)
 /**
  * installs composer to the current working directory
  */
-function installComposer($installDir, $quiet)
+function installComposer($installDir, $quiet, $version=null)
 {
     $installPath = (is_dir($installDir) ? rtrim($installDir, '/').'/' : '') . 'composer.phar';
     $installDir = realpath($installDir) ? realpath($installDir) : getcwd();
@@ -271,7 +294,11 @@ function installComposer($installDir, $quiet)
             out("Downloading...", 'info');
         }
 
-        $source = (extension_loaded('openssl') ? 'https' : 'http').'://getcomposer.org/composer.phar';
+        if ($version === null) {
+            $source = (extension_loaded('openssl') ? 'https' : 'http').'://getcomposer.org/composer.phar';
+        } else {
+            $source = (extension_loaded('openssl') ? 'https' : 'http').'://getcomposer.org/download/'.$version.'/composer.phar';
+        }
         $errorHandler = new ErrorHandler();
         set_error_handler(array($errorHandler, 'handleError'));
         if (!copy($source, $file, getStreamContext())) {
