@@ -23,6 +23,7 @@ function process($argv)
     $force      = in_array('--force', $argv);
     $quiet      = in_array('--quiet', $argv);
     $installDir = false;
+    $installFile = 'composer.phar';
     $composerVersion = null;
 
     foreach ($argv as $key => $val) {
@@ -31,6 +32,12 @@ function process($argv)
                 $installDir = trim($argv[$key+1]);
             } else {
                 $installDir = trim(substr($val, 14));
+            }
+        } else if (0 === strpos($val, '--install-file')) {
+            if (14 === strlen($val) && isset($argv[$key+1])) {
+                $installFile = trim($argv[$key+1]);
+            } else {
+                $installFile = trim(substr($val, 15));
             }
         } else if (0 === strpos($val, '--composer-version')) {
             if (18 === strlen($val) && isset($argv[$key+1])) {
@@ -52,6 +59,9 @@ function process($argv)
             if (!empty($json['config']['install-dir'])) {
                 $installDir = $json['config']['install-dir'];
             }
+            if (!empty($json['config']['install-file'])) {
+                $installDir = $json['config']['install-file'];
+            }
         }
     }
 
@@ -72,7 +82,7 @@ function process($argv)
     }
 
     if ($ok || $force) {
-        installComposer($installDir, $quiet, $composerVersion);
+        installComposer($installDir, $quiet, $composerVersion, $installFile);
         exit(0);
     }
 
@@ -88,10 +98,12 @@ function displayHelp()
 Composer Installer
 ------------------
 Options
---help               this help
---check              for checking environment only
---force              forces the installation
---install-dir="..."  accepts a target installation directory
+--help                    this help
+--check                   for checking environment only
+--force                   forces the installation
+--install-dir="..."       accepts a target installation directory
+--install-file="..."      optional target installation filename,
+                          otherwise "composer.phar" is used
 --composer-version="..."  optional specific version of Composer to install,
                           otherwise latest version is installed
 
@@ -278,11 +290,11 @@ function checkPlatform($quiet)
 /**
  * installs composer to the current working directory
  */
-function installComposer($installDir, $quiet, $version=null)
+function installComposer($installDir, $quiet, $version=null, $installFile='composer.phar')
 {
-    $installPath = (is_dir($installDir) ? rtrim($installDir, '/').'/' : '') . 'composer.phar';
+    $installPath = (is_dir($installDir) ? rtrim($installDir, '/').'/' : '') . $installFile;
     $installDir = realpath($installDir) ? realpath($installDir) : getcwd();
-    $file       = $installDir.DIRECTORY_SEPARATOR.'composer.phar';
+    $file       = $installDir.DIRECTORY_SEPARATOR.$installFile;
 
     if (is_readable($file)) {
         @unlink($file);
