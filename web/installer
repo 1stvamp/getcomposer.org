@@ -60,7 +60,7 @@ function process($argv)
                 $installDir = $json['config']['install-dir'];
             }
             if (!empty($json['config']['install-file'])) {
-                $installDir = $json['config']['install-file'];
+                $installFile = $json['config']['install-file'];
             }
         }
     }
@@ -313,7 +313,7 @@ function installComposer($installDir, $quiet, $version=null, $installFile='compo
         }
         $errorHandler = new ErrorHandler();
         set_error_handler(array($errorHandler, 'handleError'));
-        if (!copy($source, $file, getStreamContext())) {
+        if (!copy($source, './.composer.phar', getStreamContext())) {
             out('Download failed: '.$errorHandler->message, 'error');
         }
         restore_error_handler();
@@ -323,7 +323,7 @@ function installComposer($installDir, $quiet, $version=null, $installFile='compo
 
         try {
             // test the phar validity
-            $phar = new Phar($file);
+            $phar = new Phar('./composer.phar');
             // free the variable to unlock the file
             unset($phar);
             break;
@@ -340,8 +340,9 @@ function installComposer($installDir, $quiet, $version=null, $installFile='compo
                 out('The download is corrupt ('.$e->getMessage().'), aborting.', 'error');
                 exit(1);
             }
-        }
+	}
     }
+    rename('.composer.phar', $file);
 
     if ($errorHandler->message) {
         out('The download failed repeatedly, aborting.', 'error');
