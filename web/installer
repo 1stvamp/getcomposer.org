@@ -72,8 +72,8 @@ function process($argv)
 
     $ok = checkPlatform($quiet);
 
-    if (false !== $installDir && !is_dir($installDir)) {
-        out("The defined install dir ({$installDir}) does not exist.", 'info');
+    if (false !== $installDir && !is_dir($installDir) && !mkdir($installDir)) {
+        out("The defined install dir ({$installDir}) does not exist and could not created.", 'info');
         $ok = false;
     }
 
@@ -101,7 +101,8 @@ Options
 --help                    this help
 --check                   for checking environment only
 --force                   forces the installation
---install-dir="..."       accepts a target installation directory
+--install-dir="..."       accepts a target installation directory,
+                          directory is created if it doesn't already exist
 --install-file="..."      optional target installation filename,
                           otherwise "composer.phar" is used
 --composer-version="..."  optional specific version of Composer to install,
